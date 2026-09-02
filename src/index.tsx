@@ -9,6 +9,9 @@ import {
   showToast,
 } from "@raycast/api";
 import { execFile } from "node:child_process";
+import { writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import { useEffect, useMemo, useState } from "react";
 
@@ -117,6 +120,43 @@ async function writeHistory(history: HistoryItem[]) {
   );
 }
 
+function csvField(value: string | number): string {
+  return `"${String(value).replace(/"/g, '""')}"`;
+}
+
+async function exportHistory(history: HistoryItem[]) {
+  if (history.length === 0) {
+    await showToast({
+      style: Toast.Style.Failure,
+      title: "没有可导出的查询记录",
+    });
+    return;
+  }
+
+  const exportPath = join(
+    homedir(),
+    "Documents",
+    "Raycast Dictionary History.csv",
+  );
+  const rows = history.map((item) =>
+    [
+      item.word,
+      item.definition,
+      new Date(item.queryTime).toLocaleString("zh-CN", { hour12: false }),
+      item.queryCount,
+    ]
+      .map(csvField)
+      .join(","),
+  );
+  const csv = `\uFEFFword,definition,query_time,query_count\n${rows.join("\n")}\n`;
+  await writeFile(exportPath, csv, "utf8");
+  await showToast({
+    style: Toast.Style.Success,
+    title: `已导出 ${history.length} 个单词`,
+    message: exportPath,
+  });
+}
+
 export default function Command() {
   const [searchText, setSearchText] = useState("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -200,6 +240,11 @@ export default function Command() {
                 icon={Icon.MagnifyingGlass}
                 onAction={() => lookup()}
               />
+              <Action
+                title="导出全部历史为 CSV"
+                icon={Icon.Download}
+                onAction={() => exportHistory(history)}
+              />
             </ActionPanel>
           }
         />
@@ -228,6 +273,11 @@ export default function Command() {
                       setSearchText(item.word);
                       void lookup(item.word);
                     }}
+                  />
+                  <Action
+                    title="导出全部历史为 CSV"
+                    icon={Icon.Download}
+                    onAction={() => exportHistory(history)}
                   />
                   <Action
                     title="删除历史记录"
