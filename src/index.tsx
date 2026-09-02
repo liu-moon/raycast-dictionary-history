@@ -1,11 +1,13 @@
 import {
   Action,
   ActionPanel,
+  Alert,
   Color,
   Icon,
   List,
   LocalStorage,
   Toast,
+  confirmAlert,
   showToast,
 } from "@raycast/api";
 import { execFile } from "node:child_process";
@@ -226,6 +228,33 @@ export default function Command() {
     await writeHistory(next);
   }
 
+  async function clearAllHistory() {
+    if (history.length === 0) {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "没有可清除的历史记录",
+      });
+      return;
+    }
+
+    const confirmed = await confirmAlert({
+      title: "清除全部历史记录？",
+      message: `将永久删除全部 ${history.length} 条查词记录，此操作无法撤销。`,
+      primaryAction: {
+        title: "清除全部",
+        style: Alert.ActionStyle.Destructive,
+      },
+    });
+    if (!confirmed) return;
+
+    setHistory([]);
+    await LocalStorage.removeItem(HISTORY_KEY);
+    await showToast({
+      style: Toast.Style.Success,
+      title: "已清除全部历史记录",
+    });
+  }
+
   return (
     <List
       isLoading={isLoading}
@@ -296,6 +325,12 @@ export default function Command() {
                     icon={Icon.Trash}
                     style={Action.Style.Destructive}
                     onAction={() => remove(item)}
+                  />
+                  <Action
+                    title="清除全部历史记录"
+                    icon={Icon.XMarkCircle}
+                    style={Action.Style.Destructive}
+                    onAction={clearAllHistory}
                   />
                 </ActionPanel>
               }
