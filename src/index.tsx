@@ -10,8 +10,6 @@ import {
 } from "@raycast/api";
 import { execFile } from "node:child_process";
 import { writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { promisify } from "node:util";
 import { useEffect, useMemo, useState } from "react";
 
@@ -124,6 +122,23 @@ function csvField(value: string | number): string {
   return `"${String(value).replace(/"/g, '""')}"`;
 }
 
+async function chooseExportPath(): Promise<string | undefined> {
+  const script = `
+    set destination to choose file name with prompt "选择词典历史导出位置" default name "Raycast Dictionary History.csv"
+    POSIX path of destination
+  `;
+  try {
+    const { stdout } = await execFileAsync("/usr/bin/osascript", [
+      "-e",
+      script,
+    ]);
+    return stdout.trim() || undefined;
+  } catch {
+    // The user cancelled the native save dialog.
+    return undefined;
+  }
+}
+
 async function exportHistory(history: HistoryItem[]) {
   if (history.length === 0) {
     await showToast({
@@ -133,11 +148,8 @@ async function exportHistory(history: HistoryItem[]) {
     return;
   }
 
-  const exportPath = join(
-    homedir(),
-    "Documents",
-    "Raycast Dictionary History.csv",
-  );
+  const exportPath = await chooseExportPath();
+  if (!exportPath) return;
   const rows = history.map((item) =>
     [
       item.word,
