@@ -183,10 +183,6 @@ export default function Command() {
     });
   }, []);
 
-  const exactMatch = history.find(
-    (item) =>
-      item.word.toLocaleLowerCase() === searchText.trim().toLocaleLowerCase(),
-  );
   const visibleHistory = useMemo(() => history, [history]);
 
   async function lookup(requestedWord?: string) {
@@ -264,7 +260,7 @@ export default function Command() {
       onSearchTextChange={setSearchText}
       throttle
     >
-      {searchText.trim() && !exactMatch ? (
+      {searchText.trim() ? (
         <List.Item
           icon={{ source: Icon.MagnifyingGlass, tintColor: Color.Blue }}
           title={`查询 “${searchText.trim()}”`}
